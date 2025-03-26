@@ -1,2 +1,4 @@
 selenium==4.29.0
 webdriver-manager==4.0.2
+pywin32
+keyring

@@ -25,6 +25,7 @@ class Task:
     state: str
     description: str
     opened: datetime
+    link: str
 
 
 def setup_webdriver() -> EdgeWebDriver:
@@ -105,17 +106,31 @@ def parse_table(web_driver: EdgeWebDriver) -> List[Task]:
 
                 opened_str = cells[4].text.strip()
                 opened = datetime.strptime(opened_str, "%m/%d/%Y %I:%M:%S %p")
+                link = cells[0].find_element(By.TAG_NAME, "a").get_attribute("href")
                 list_object = Task(
                     number=number,
                     assigned_to=assigned_to,
                     state=state,
                     description=description,
                     opened=opened,
+                    link=link,
                 )
                 table_objects.append(list_object)
     except Exception as e:
         print(f"An error occurred while parsing the table: {e}")
     return table_objects
+
+
+def print_tasks(tasks_list: List[Task]) -> None:
+    """
+    Prints all the task information in a human-readable format.
+
+    Args:
+        tasks_list (List[Task]): list of tasks to print."""
+    for task in tasks_list:
+        print(
+            f"Task Number: {task.number}\tAssigned To: {task.assigned_to}\tState: {task.state}\tDescription: {task.description}\tOpened: {task.opened}\tLink: {task.link}\n"
+        )
 
 
 if __name__ == "__main__":
@@ -145,10 +160,7 @@ if __name__ == "__main__":
             EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
         )
         tasks = parse_table(driver)
-        for task in tasks:
-            print(
-                f"Task Number: {task.number}\tAssigned To: {task.assigned_to}\tState: {task.state}\tDescription: {task.description}\tOpened: {task.opened}\n"
-            )
+        print_tasks(tasks)
 
     except TimeoutException as e:
         print(f"Timed out while waiting for element: {e}")

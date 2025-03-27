@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import datetime
+from datetime import datetime
 from typing import List
 import keyring
 from selenium import webdriver
@@ -24,7 +24,7 @@ class Task:
     assigned_to: str
     state: str
     description: str
-    opened: datetime.datetime
+    opened: datetime
 
 
 def setup_webdriver() -> EdgeWebDriver:
@@ -92,20 +92,30 @@ def parse_table(web_driver: EdgeWebDriver) -> List[Task]:
 
     Returns:
         List[Task]: A list of Task objects"""
-    task_list = list()
-    task_elements = web_driver.find_elements(By.CSS_SELECTOR, ".list_row")
-    for task_element in task_elements:
-        td_elements = task_element.find_elements(By.CSS_SELECTOR, "td.vt")
-        task_list.append(
-            Task(
-                number=td_elements[0].text,
-                assigned_to=td_elements[1].text,
-                state=td_elements[2].text,
-                description=td_elements[3].text,
-                opened=td_elements[4].text,
-            )
-        )
-    return task_list
+    table_objects = []
+    try:
+        rows = web_driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
+        for row in rows:
+            cells = row.find_elements(By.CSS_SELECTOR, "td.vt")
+            if len(cells) >= 5:
+                number = cells[0].text.strip()
+                assigned_to = cells[1].text.strip()
+                state = cells[2].text.strip()
+                description = cells[3].text.strip()
+
+                opened_str = cells[4].text.strip()
+                opened = datetime.strptime(opened_str, "%m/%d/%Y %I:%M:%S %p")
+                list_object = Task(
+                    number=number,
+                    assigned_to=assigned_to,
+                    state=state,
+                    description=description,
+                    opened=opened,
+                )
+                table_objects.append(list_object)
+    except Exception as e:
+        print(f"An error occurred while parsing the table: {e}")
+    return table_objects
 
 
 if __name__ == "__main__":

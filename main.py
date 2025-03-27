@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import datetime
 from typing import List
 import keyring
 from selenium import webdriver
@@ -11,19 +12,28 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchShadowRootException, TimeoutException
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
+# Global Variables
 TIMEOUT = 10
 
 
 @dataclass
 class Task:
+    """Represents a ServiceNow Task"""
+
     number: str
     assigned_to: str
     state: str
-    short_desctiption: str
-    opened: str
+    description: str
+    opened: datetime.datetime
 
 
-def setup_webdriver() -> None:
+def setup_webdriver() -> EdgeWebDriver:
+    """
+    Sets up and configures the Edge WebDriver.
+
+    Returns:
+        web_driver (EdgeWebDriver): The configured Edge Webdriver instance.
+    """
     edge_options = Options()
     edge_options.use_chromium = True
     edge_options.add_argument("--no-sandbox")
@@ -35,6 +45,11 @@ def setup_webdriver() -> None:
 
 
 def login(web_driver: EdgeWebDriver) -> None:
+    """
+    Logs into the ServiceNow application.
+
+    Args:
+        web_driver (EdgeWebDriver): The Edge WebDriver instance."""
     username = "achristi@nysif.com"
     textbox_username = web_driver.find_element(By.ID, "userNameInput")
     textbox_password = web_driver.find_element(By.ID, "passwordInput")
@@ -46,6 +61,15 @@ def login(web_driver: EdgeWebDriver) -> None:
 
 
 def page_loaded(web_driver: EdgeWebDriver, expected_url: str) -> bool:
+    """
+    Waits for the specified URL and document to be fully loaded.
+
+    Args:
+        web_driver (EdgeWebDriver): The Edge WebDriver instance.
+        expected_url (str): The expected URL to wait for.
+
+    Returns:
+        bool: True if page is loaded successfully, False otherwise."""
     try:
         WebDriverWait(web_driver, TIMEOUT).until(EC.url_to_be(expected_url))
         WebDriverWait(web_driver, TIMEOUT).until(
@@ -60,6 +84,14 @@ def page_loaded(web_driver: EdgeWebDriver, expected_url: str) -> bool:
 
 
 def parse_table(web_driver: EdgeWebDriver) -> List[Task]:
+    """
+    Parses the table on the page and returns a list of Task objects.
+
+    Args:
+        web_driver (EdgeWebDriver): The EdgeWebDriver instance.
+
+    Returns:
+        List[Task]: A list of Task objects"""
     task_list = list()
     task_elements = web_driver.find_elements(By.CSS_SELECTOR, ".list_row")
     for task_element in task_elements:
@@ -69,7 +101,7 @@ def parse_table(web_driver: EdgeWebDriver) -> List[Task]:
                 number=td_elements[0].text,
                 assigned_to=td_elements[1].text,
                 state=td_elements[2].text,
-                short_desctiption=td_elements[3].text,
+                description=td_elements[3].text,
                 opened=td_elements[4].text,
             )
         )
@@ -102,7 +134,11 @@ if __name__ == "__main__":
         table = WebDriverWait(driver, TIMEOUT).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
         )
-        print(parse_table(driver))
+        tasks = parse_table(driver)
+        for task in tasks:
+            print(
+                f"Task Number: {task.number}\tAssigned To: {task.assigned_to}\tState: {task.state}\tDescription: {task.description}\tOpened: {task.opened}\n"
+            )
 
     except TimeoutException as e:
         print(f"Timed out while waiting for element: {e}")

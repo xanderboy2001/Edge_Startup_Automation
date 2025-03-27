@@ -1,12 +1,9 @@
-import os
-import time
-from typing import List
 from dataclasses import dataclass
+from typing import List
 import keyring
 from selenium import webdriver
 from selenium.webdriver.edge.webdriver import WebDriver as EdgeWebDriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.edge.service import Service
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.support import expected_conditions as EC
@@ -27,14 +24,10 @@ class Task:
 
 
 def setup_webdriver() -> None:
-    # os.environ["ELECTRON_ENABLE_LOGGING"] = "true"
-    # os.environ["NO_REMOTE_DEBUGGING"] = "1"
-    # os.environ["NO_SANDBOX"] = "1"
-    # os.environ["NO_USER_DATA_DIR"] = "1"
     edge_options = Options()
     edge_options.use_chromium = True
     edge_options.add_argument("--no-sandbox")
-    # edge_options.add_argument("--headless")
+    edge_options.add_argument("--headless")
     edge_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     driver_path = EdgeChromiumDriverManager().install()
     service = Service(driver_path)
@@ -66,13 +59,7 @@ def page_loaded(web_driver: EdgeWebDriver, expected_url: str) -> bool:
         return True
 
 
-def dump_elements(elements: List[WebElement]):
-    print("Dumping elements...")
-    for element in elements:
-        print(f"Tag Name: {element.tag_name}\tText: {element.text}")
-
-
-def parse_table(web_driver: EdgeWebDriver):
+def parse_table(web_driver: EdgeWebDriver) -> List[Task]:
     task_list = list()
     task_elements = web_driver.find_elements(By.CSS_SELECTOR, ".list_row")
     for task_element in task_elements:
@@ -91,20 +78,26 @@ def parse_table(web_driver: EdgeWebDriver):
 
 if __name__ == "__main__":
     url = "https://nysifprod.service-now.com/now/nav/ui/classic/params/target/task_list.do%3Fsysparm_nostack%3Dtrue%26sysparm_query%3Dactive%253Dtrue%255Eassignment_group%253D2d636adcdb4957006a2c9837db96193e%255Estate!%253D6%255EnumberNOT%2520LIKERITM%26sysparm_first_row%3D1%26sysparm_view%3D"
+    # Initialize Edge
     driver = setup_webdriver()
+    # Navigate to SNOW
     driver.get(url)
+    # Login
     login(driver)
+    # Wait until page is loaded before trying to work with it
     WebDriverWait(driver, TIMEOUT).until(lambda driver: page_loaded(driver, url))
+    # Find the macroponent
     try:
         shadow_host1 = WebDriverWait(driver, TIMEOUT).until(
             EC.presence_of_element_located(
                 (By.TAG_NAME, "macroponent-f51912f4c700201072b211d4d8c26010")
             )
         )
-        print(shadow_host1.shadow_root)
+        # Find the iframe and switch to it
         iframe = WebDriverWait(shadow_host1.shadow_root, TIMEOUT).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "iframe"))
         )
+        # Find the table and parse it
         driver.switch_to.frame(iframe)
         table = WebDriverWait(driver, TIMEOUT).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
